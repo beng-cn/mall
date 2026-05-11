@@ -1,10 +1,10 @@
 <template>
   <div id="app">
-    <!-- 全局顶部导航 -->
-    <div v-if="isLoggedIn" style="display: flex; gap: 20px; padding: 15px; background: #f5f5f5;">
-      <router-link to="/product/list">首页</router-link>
-      <router-link to="/cart">购物车</router-link>
-      <router-link to="/order/list">我的订单</router-link>
+    <!-- 全局顶部导航 → 橙黄色背景 -->
+    <div v-if="isLoggedIn" class="navbar">
+      <router-link to="/product/list" class="nav-btn">首页</router-link>
+      <router-link to="/cart" class="nav-btn">购物车</router-link>
+      <router-link to="/order/list" class="nav-btn">我的订单</router-link>
       <el-button type="danger" size="small" @click="logout">退出登录</el-button>
     </div>
 
@@ -47,5 +47,31 @@ router.afterEach(() => {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+/* 导航栏整体：橙黄色背景 */
+.navbar {
+  display: flex;
+  gap: 15px;
+  padding: 15px 25px;
+  background: #db590d; 
+  align-items: center;
+}
+
+/* 导航按钮：深黄色背景 + 白色文字 */
+.nav-btn {
+  background: #e68200; 
+  color: #fff !important;
+  padding: 6px 14px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+/* 鼠标悬浮效果 */
+.nav-btn:hover {
+  background: #d36f00;
+  color: #fff !important;
 }
 </style>

@@ -14,6 +14,7 @@
     </div>
 
     <el-row :gutter="20" style="padding: 0 20px">
+      <!-- 全部统一用 item.ID 大写 -->
       <el-col :span="6" v-for="item in list" :key="item.ID">
         <el-card shadow="hover" @click="toDetail(item.ID)">
           <div style="font-size: 16px; font-weight: bold">{{ item.name }}</div>
@@ -45,12 +46,29 @@ const list = ref([])
 
 const getList = async () => {
   const res = await getProductList({ keyword: keyword.value })
+  console.log("商品列表:", res)
   list.value = res
 }
 
+// 最终修复！！！
 const handleAddCart = async (pid) => {
-  await addCart({ user_id: 1, product_id: pid, quantity: 1 })
-  ElMessage.success('已加入购物车')
+  console.log("加入购物车的商品ID:", pid)
+  
+  if (!pid || pid <= 0) {
+    ElMessage.error("商品ID无效")
+    return
+  }
+
+  try {
+    await addCart({
+      user_id: 1,
+      product_id: pid,
+      quantity: 1
+    })
+    ElMessage.success("加入购物车成功")
+  } catch (e) {
+    ElMessage.error("加入失败")
+  }
 }
 
 const toDetail = (id) => {

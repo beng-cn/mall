@@ -2,6 +2,7 @@
   <div style="padding: 20px">
     <h2>我的订单</h2>
     <el-table :data="orderList" border style="width: 100%; margin-top: 20px">
+      <!-- 这里用 order_no，和你结构体的 json 标签完全一致 -->
       <el-table-column prop="order_no" label="订单号" />
       <el-table-column prop="total" label="订单金额" />
       <el-table-column prop="status" label="订单状态">
@@ -15,17 +16,20 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-// 这里先写死模拟数据，你可以后续对接后端订单列表接口
-const orderList = ref([
-  {
-    id: 1,
-    order_no: 'ORD123456',
-    total: 99,
-    status: 0
+
+const orderList = ref([])
+
+const getOrderList = async () => {
+  try {
+    const res = await fetch("http://localhost:8080/api/order/list?user_id=1")
+    const data = await res.json()
+    orderList.value = data
+  } catch (e) {
+    console.log("获取订单失败", e)
   }
-])
+}
 
 onMounted(() => {
-  // 后续可在这里调用后端订单列表接口
+  getOrderList()
 })
 </script>
