@@ -29,6 +29,7 @@ func SetupRouter() *gin.Engine {
 
 	cart := r.Group("/api/cart")
 	{
+		cart.GET("/list", controllers.GetCartList)
 		cart.POST("/add", controllers.AddToCart)
 		cart.PUT("/:id", controllers.UpdateCartQuantity)
 		cart.DELETE("/:id", controllers.DeleteCartItem)
@@ -37,6 +38,7 @@ func SetupRouter() *gin.Engine {
 	order := r.Group("/api/order")
 	{
 		order.POST("/create", controllers.CreateOrder)
+		order.GET("/list", controllers.GetOrderList)
 	}
 
 	// 管理端路由

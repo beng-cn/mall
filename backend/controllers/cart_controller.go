@@ -8,21 +8,45 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 添加到购物车
+func GetCartList(c *gin.Context) {
+	userID := c.Query("user_id") // 从参数获取用户ID
+
+	var carts []models.Cart
+	// 查询未删除、属于当前用户的购物车数据
+	err := config.DB.
+		Where("user_id = ? AND deleted_at IS NULL", userID).
+		Find(&carts).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, carts)
+}
+
+// 添加到购物车（最终稳定版）
 func AddToCart(c *gin.Context) {
 	var cart models.Cart
 	if err := c.ShouldBindJSON(&cart); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// 查找是否已存在
 	var existingCart models.Cart
-	config.DB.Where("user_id = ? AND product_id = ?", cart.UserID, cart.ProductID).First(&existingCart)
-	if existingCart.ID != 0 {
+	err := config.DB.Where(
+		"user_id = ? AND product_id = ? AND deleted_at IS NULL",
+		cart.UserID, cart.ProductID,
+	).First(&existingCart).Error
+
+	if err == nil {
 		existingCart.Quantity += cart.Quantity
 		config.DB.Save(&existingCart)
 	} else {
 		config.DB.Create(&cart)
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "添加成功"})
 }
 
