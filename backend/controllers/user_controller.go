@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// 注册 —— 密码加密
+// 注册
 func Register(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -40,7 +40,7 @@ func Register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "注册成功"})
 }
 
-// 登录 —— 密码校验
+// 登录
 func Login(c *gin.Context) {
 	var req struct {
 		Username string `json:"username"`

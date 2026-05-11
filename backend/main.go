@@ -10,7 +10,7 @@ func main() {
 	// 初始化数据库
 	config.InitDB()
 
-	// 自动迁移表结构（可选，也可以用SQL脚本建表）
+	// 自动迁移表结构
 	config.DB.AutoMigrate(
 		&models.User{},
 		&models.Category{},

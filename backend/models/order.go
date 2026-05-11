@@ -2,6 +2,7 @@ package models
 
 import "gorm.io/gorm"
 
+//定义结构体
 type Order struct {
 	gorm.Model
 	UserID  uint    `json:"user_id"`

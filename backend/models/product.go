@@ -2,6 +2,7 @@ package models
 
 import "gorm.io/gorm"
 
+//定义结构体
 type Product struct {
 	gorm.Model
 	CategoryID uint    `json:"category_id"`

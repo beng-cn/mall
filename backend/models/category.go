@@ -2,6 +2,7 @@ package models
 
 import "gorm.io/gorm"
 
+//定义结构体
 type Category struct {
 	gorm.Model
 	Name     string `gorm:"not null" json:"name"`

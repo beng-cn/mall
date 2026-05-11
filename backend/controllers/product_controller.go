@@ -38,7 +38,7 @@ func GetProductDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, product)
 }
 
-// 新增商品（管理端）
+// 新增商品（管理员）
 func CreateProduct(c *gin.Context) {
 	var product models.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
