@@ -1,6 +1,3 @@
-# ==============================
-# 前端忽略规则（Vite/Vue）
-# ==============================
 frontend/node_modules/
 frontend/dist/
 frontend/.env
@@ -8,28 +5,15 @@ frontend/.env.local
 frontend/.env.*.local
 frontend/npm-debug.log
 frontend/yarn-error.log
-
-# ==============================
-# 后端忽略规则（Go）
-# ==============================
 backend/bin/
 backend/*.exe
 backend/*.log
 backend/*.out
-
-# ==============================
-# 通用忽略规则
-# ==============================
-# 编辑器配置
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# 系统文件
 .DS_Store
 Thumbs.db
-
-# 日志文件
 *.log
 *.tmp
