@@ -9,6 +9,7 @@ import (
 func main() {
 	// 初始化数据库
 	config.InitDB()
+	config.InitRedis()
 
 	// 自动迁移表结构
 	config.DB.AutoMigrate(
