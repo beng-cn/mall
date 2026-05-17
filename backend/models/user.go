@@ -1,10 +1,18 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"time"
 
-//定义结构体
+	"gorm.io/gorm"
+)
+
+// 定义结构体
 type User struct {
-	gorm.Model
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
 	Username string `gorm:"unique;not null" json:"username"`
 	Password string `gorm:"not null" json:"password"` // 必须有 gorm:"not null"
 	Nickname string `json:"nickname"`

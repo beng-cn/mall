@@ -1,14 +1,23 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"time"
 
-//定义结构体
+	"gorm.io/gorm"
+)
+
 type Product struct {
-	gorm.Model
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
 	CategoryID uint    `json:"category_id"`
 	Name       string  `gorm:"not null" json:"name"`
 	Price      float64 `gorm:"not null" json:"price"`
 	Stock      int     `gorm:"not null" json:"stock"`
 	Image      string  `json:"image"`
-	Status     int     `gorm:"default:1" json:"status"` // 1上架 0下架
+	Status     int     `gorm:"default:1" json:"status"`
+
+	Category Category `gorm:"foreignKey:CategoryID" json:"category"`
 }

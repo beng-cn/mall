@@ -1,10 +1,18 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"time"
 
-//定义结构体
+	"gorm.io/gorm"
+)
+
+// 定义结构体
 type Order struct {
-	gorm.Model
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
 	UserID  uint    `json:"user_id"`
 	OrderNo string  `gorm:"unique;not null" json:"order_no"`
 	Total   float64 `json:"total"`
@@ -12,7 +20,11 @@ type Order struct {
 }
 
 type OrderItem struct {
-	gorm.Model
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+
 	OrderID   uint    `json:"order_id"`
 	ProductID uint    `json:"product_id"`
 	Quantity  int     `json:"quantity"`

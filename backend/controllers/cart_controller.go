@@ -25,11 +25,26 @@ func GetCartList(c *gin.Context) {
 	c.JSON(http.StatusOK, carts)
 }
 
-// 添加到购物车（最终稳定版）
+// 添加到购物车（增加：库存为0时禁止添加）
 func AddToCart(c *gin.Context) {
 	var cart models.Cart
 	if err := c.ShouldBindJSON(&cart); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// ==============================
+	// 🔥 新增：先查询商品库存
+	// ==============================
+	var product models.Product
+	if err := config.DB.First(&product, cart.ProductID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "商品不存在"})
+		return
+	}
+
+	// 🔥 库存为0 → 直接拦截，不让加入购物车
+	if product.Stock <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "商品库存不足，无法加入购物车"})
 		return
 	}
 
@@ -65,6 +80,9 @@ func UpdateCartQuantity(c *gin.Context) {
 // 删除购物车商品
 func DeleteCartItem(c *gin.Context) {
 	id := c.Param("id")
-	config.DB.Delete(&models.Cart{}, id)
+	if err := config.DB.Unscoped().Delete(&models.Cart{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除失败"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
 }
