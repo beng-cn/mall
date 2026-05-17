@@ -12,7 +12,7 @@
           <div class="modal-box">
             <h3>选择商品分类</h3>
 
-            <!-- 父分类复选框（标准小写id）-->
+            <!-- 父分类复选框 -->
             <div class="parent-list">
               <label class="checkbox-item" v-for="p in parentCategories" :key="p.id">
                 <input
@@ -25,7 +25,7 @@
               </label>
             </div>
 
-            <!-- 子分类复选框（标准小写id）-->
+            <!-- 子分类复选框 -->
             <div v-for="pid in checkedParentIds" :key="pid" class="child-list">
               <div v-if="childMap[pid] && childMap[pid].length > 0">
                 <p class="child-title">{{ getParentName(pid) }} ：</p>

@@ -21,7 +21,6 @@
         </el-col>
 
         <el-col :span="12">
-          <!-- 🔥 所有字段都用小写，和后端返回一致 -->
           <h1 style="font-size: 24px; margin-bottom: 20px;">{{ product.name }}</h1>
           <p style="color: #e53935; font-size: 32px; font-weight: bold; margin-bottom: 20px;">
             ¥{{ product.price }}
@@ -51,7 +50,7 @@ import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const product = ref(null)
-const quantity = ref(1) // 新增：购买数量
+const quantity = ref(1) 
 
 const getProductDetail = async () => {
   const id = route.params.id
@@ -68,14 +67,14 @@ const getProductDetail = async () => {
     }
     
     product.value = await res.json()
-    console.log("商品详情数据:", product.value) // 新增：调试日志
+    console.log("商品详情数据:", product.value) 
   } catch (e) {
     console.error("获取商品详情失败:", e)
     ElMessage.error("获取商品详情失败")
   }
 }
 
-// 新增：加入购物车功能
+
 const handleAddCart = async () => {
   console.log("加入购物车的商品ID:", product.value.id)
   

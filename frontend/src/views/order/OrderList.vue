@@ -50,7 +50,7 @@
       </el-table-column>
     </el-table>
 
-    <!-- 订单商品弹窗（改用普通div，不使用ElList） -->
+    <!-- 订单商品弹窗 -->
     <el-dialog v-model="dialogVisible" title="订单商品详情" width="500px">
       <div>
         <div 
