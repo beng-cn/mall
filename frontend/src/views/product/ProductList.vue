@@ -10,20 +10,18 @@
         />
         <el-button type="primary" @click="getList">搜索</el-button>
       </div>
-      <el-button type="danger" @click="logout">退出登录</el-button>
     </div>
 
     <el-row :gutter="20" style="padding: 0 20px">
-      <!-- 全部统一用 item.ID 大写 -->
-      <el-col :span="6" v-for="item in list" :key="item.ID">
-        <el-card shadow="hover" @click="toDetail(item.ID)">
+      <el-col :span="6" v-for="item in list" :key="item.id">
+        <el-card shadow="hover" @click="toDetail(item.id)">
           <div style="font-size: 16px; font-weight: bold">{{ item.name }}</div>
           <div style="color: red; font-size: 18px; margin: 10px 0">¥{{ item.price }}</div>
           <div style="font-size: 12px; color: #999">库存：{{ item.stock }}</div>
           <el-button
             type="primary"
             style="margin-top: 10px"
-            @click.stop="handleAddCart(item.ID)"
+            @click.stop="handleAddCart(item.id)"
           >
             加入购物车
           </el-button>
@@ -34,23 +32,32 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { getProductList } from '../../api/product'
 import { addCart } from '../../api/cart'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const route = useRoute()
+
 const keyword = ref('')
 const list = ref([])
 
 const getList = async () => {
-  const res = await getProductList({ keyword: keyword.value })
+  const params = {
+    keyword: keyword.value
+  }
+  
+  if (route.query.category_id) {
+    params.category_id = route.query.category_id
+  }
+  
+  const res = await getProductList(params)
   console.log("商品列表:", res)
   list.value = res
 }
 
-// 最终修复！！！
 const handleAddCart = async (pid) => {
   console.log("加入购物车的商品ID:", pid)
   
@@ -67,7 +74,7 @@ const handleAddCart = async (pid) => {
     })
     ElMessage.success("加入购物车成功")
   } catch (e) {
-    ElMessage.error("加入失败")
+    ElMessage.error("商品库存不足，无法加入购物车")
   }
 }
 
@@ -75,11 +82,9 @@ const toDetail = (id) => {
   router.push(`/product/detail/${id}`)
 }
 
-const logout = () => {
-  localStorage.removeItem('user')
-  ElMessage.success('退出成功')
-  router.push('/user/login')
-}
-
 onMounted(() => getList())
+
+watch(() => route.query.category_id, () => {
+  getList()
+})
 </script>
