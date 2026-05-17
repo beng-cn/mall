@@ -33,16 +33,13 @@ func AddToCart(c *gin.Context) {
 		return
 	}
 
-	// ==============================
-	// 🔥 新增：先查询商品库存
-	// ==============================
 	var product models.Product
 	if err := config.DB.First(&product, cart.ProductID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "商品不存在"})
 		return
 	}
 
-	// 🔥 库存为0 → 直接拦截，不让加入购物车
+	// 库存为0 → 直接拦截，不让加入购物车
 	if product.Stock <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "商品库存不足，无法加入购物车"})
 		return

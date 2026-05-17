@@ -14,7 +14,7 @@ type User struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 
 	Username string `gorm:"unique;not null" json:"username"`
-	Password string `gorm:"not null" json:"password"` // 必须有 gorm:"not null"
+	Password string `gorm:"not null" json:"password"`
 	Nickname string `json:"nickname"`
 	Email    string `json:"email"`
 	Phone    string `json:"phone"`

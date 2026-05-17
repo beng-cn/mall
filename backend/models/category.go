@@ -7,7 +7,6 @@ import (
 )
 
 type Category struct {
-	// 🔥 手动重写gorm.Model的字段，加上小写json标签
 	ID        uint           `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`

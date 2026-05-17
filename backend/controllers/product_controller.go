@@ -16,21 +16,14 @@ func GetProductList(c *gin.Context) {
 	keyword := c.Query("keyword")
 	categoryIDStr := c.Query("category_id")
 
-	// 🔥 调试日志：打印接收到的参数
-	println("=====================================")
-	println("接收到的请求参数：")
-	println("keyword:", keyword)
-	println("category_id:", categoryIDStr)
-
 	db := config.DB
 
-	// 1. 关键词模糊搜索
+	// 关键词模糊搜索
 	if keyword != "" {
 		db = db.Where("name LIKE ?", "%"+keyword+"%")
-		println("添加关键词筛选：name LIKE %" + keyword + "%")
 	}
 
-	// 2. 多分类同时筛选
+	// 多分类筛选
 	if categoryIDStr != "" {
 		categoryIDList := strings.Split(categoryIDStr, ",")
 		var validCategoryIDs []uint
@@ -44,36 +37,22 @@ func GetProductList(c *gin.Context) {
 			id, err := strconv.ParseUint(idStr, 10, 32)
 			if err == nil {
 				validCategoryIDs = append(validCategoryIDs, uint(id))
-				println("有效分类ID:", id)
-			} else {
-				println("无效分类ID:", idStr, "错误:", err.Error())
 			}
 		}
 
 		if len(validCategoryIDs) > 0 {
-			// 🔥 开启SQL日志，查看实际执行的查询语句
-			db = db.Debug().Where("category_id IN (?)", validCategoryIDs)
-			println("添加多分类筛选：category_id IN", validCategoryIDs)
-		} else {
-			println("没有有效的分类ID，不进行分类筛选")
+			db = db.Where("category_id IN (?)", validCategoryIDs)
 		}
-	} else {
-		println("没有传递category_id参数，显示全部商品")
 	}
 
-	// 3. 只显示上架商品
+	// 只显示上架商品
 	db = db.Where("status = 1")
-	println("添加状态筛选：status = 1")
 
-	// 4. 执行查询
+	// 查询
 	if err := db.Find(&products).Error; err != nil {
-		println("查询失败:", err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "商品查询失败"})
 		return
 	}
-
-	println("查询成功，返回商品数量:", len(products))
-	println("=====================================")
 
 	c.JSON(http.StatusOK, products)
 }
