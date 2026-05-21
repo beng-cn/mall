@@ -26,5 +26,9 @@ func main() {
 
 	// 启动路由
 	r := routes.SetupRouter()
+
+	// 🔥 新增：静态文件服务，让上传的图片可以被访问
+	r.Static("/uploads", "./uploads")
+
 	r.Run(":8080")
 }

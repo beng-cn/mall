@@ -27,6 +27,10 @@ func SetupRouter() *gin.Engine {
 		product.GET("/:id", controllers.GetProductDetail)
 		product.GET("/category/parents", controllers.GetParentCategories)
 		product.GET("/category/children", controllers.GetChildCategories)
+		product.POST("/upload", controllers.UploadImage)
+		product.POST("/category/add", controllers.CreateCategory)
+		product.PUT("/category/:id", controllers.UpdateCategory)
+		product.DELETE("/category/:id", controllers.DeleteCategory)
 	}
 
 	cart := r.Group("/api/cart")
@@ -42,14 +46,16 @@ func SetupRouter() *gin.Engine {
 		order.POST("/create", controllers.CreateOrder)
 		order.GET("/list", controllers.GetOrderList)
 		order.POST("/pay/:id", controllers.PayOrder)
-		order.GET("/items/:id", controllers.GetOrderItems)   // 商品列表
-		order.DELETE("/delete/:id", controllers.DeleteOrder) // 删除订单
+		order.GET("/items/:id", controllers.GetOrderItems)
+		order.DELETE("/delete/:id", controllers.DeleteOrder)
 	}
 
 	// 管理端路由
 	admin := r.Group("/api/admin")
 	{
 		admin.POST("/product", controllers.CreateProduct)
+		admin.PUT("/product/:id", controllers.UpdateProduct)
+		admin.DELETE("/product/:id", controllers.DeleteProduct)
 	}
 
 	return r

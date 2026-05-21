@@ -74,23 +74,6 @@ func GetProductDetail(c *gin.Context) {
 	c.JSON(200, product)
 }
 
-// 新增商品
-func CreateProduct(c *gin.Context) {
-	var product models.Product
-	if err := c.ShouldBindJSON(&product); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误：" + err.Error()})
-		return
-	}
-	if err := config.DB.Create(&product).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "商品创建失败"})
-		return
-	}
-
-	config.RDB.Del(config.Ctx, "product:list:*")
-
-	c.JSON(http.StatusOK, gin.H{"message": "创建成功", "data": product})
-}
-
 // 获取所有父分类
 func GetParentCategories(c *gin.Context) {
 	// 固定缓存key，因为一级分类永远是 parent_id=0
