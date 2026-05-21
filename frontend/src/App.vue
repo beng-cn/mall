@@ -58,9 +58,9 @@
           </div>
         </div>
       </div>
-
       <router-link to="/cart" class="nav-btn">购物车</router-link>
       <router-link to="/order/list" class="nav-btn">我的订单</router-link>
+      <router-link to="/product/add" class="nav-btn">新增商品</router-link>
       <el-button type="danger" size="small" @click="logout">退出登录</el-button>
     </div>
 

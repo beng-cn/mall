@@ -1,8 +1,7 @@
 <template>
   <div style="padding: 20px; max-width: 1200px; margin: 0 auto;">
-    <!-- 加载状态 -->
-    <div v-if="product === null" style="text-align: center; padding: 50px;">
-      <el-spinner size="large" />
+    <div v-if="product === null" style="text-align: center; padding: 50px; color: #999; font-size: 16px;">
+      商品信息加载中...
     </div>
 
     <!-- 商品详情 -->
@@ -14,20 +13,26 @@
       <el-row :gutter="40">
         <el-col :span="12">
           <div style="border: 1px solid #eee; border-radius: 8px; padding: 20px; text-align: center;">
-            <div style="width: 100%; height: 400px; background: #f5f5f5; display: flex; align-items: center; justify-content: center;">
-              <span style="color: #999;">商品图片</span>
+            <img 
+              v-if="product.image" 
+              :src="product.image" 
+              :alt="product.name"
+              style="max-width: 100%; max-height: 400px; object-fit: contain; border-radius: 4px;"
+            />
+            <div v-else style="width: 100%; height: 400px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
+              <span style="color: #999;">暂无商品图片</span>
             </div>
           </div>
         </el-col>
 
         <el-col :span="12">
-          <h1 style="font-size: 24px; margin-bottom: 20px;">{{ product.name }}</h1>
+          <h1 style="font-size: 24px; margin-bottom: 20px; line-height: 1.4;">{{ product.name }}</h1>
           <p style="color: #e53935; font-size: 32px; font-weight: bold; margin-bottom: 20px;">
-            ¥{{ product.price }}
+            ¥{{ product.price.toFixed(2) }}
           </p>
           <p style="color: #666; margin-bottom: 10px;">库存：{{ product.stock }} 件</p>
           <p style="color: #666; margin-bottom: 10px;">商品编号：{{ product.id }}</p>
-          <p style="color: #666; margin-bottom: 30px;">分类：{{ product.category.name }}</p>
+          <p style="color: #666; margin-bottom: 30px;">分类：{{ product.category?.name || '未分类' }}</p>
 
           <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 30px;">
             <span>数量：</span>

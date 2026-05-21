@@ -32,6 +32,13 @@ const routes = [
     component: () => import('../views/product/ProductDetail.vue'),
     meta: { requiresAuth: true }
   },
+  // 🔥 新增：新增商品路由（完全匹配你的文件路径）
+  {
+    path: '/product/add',
+    name: 'AddProduct',
+    component: () => import('../views/product/AddProduct.vue'),
+    meta: { requiresAuth: true }
+  },
 
   // 购物车（必须登录）
   {
