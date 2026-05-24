@@ -16,7 +16,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column prop="total" label="订单金额" />
+      <el-table-column prop="total" label="订单金额" :formatter="formatPrice" />
       
       <el-table-column prop="status" label="订单状态">
         <template #default="scope">
@@ -26,26 +26,26 @@
 
       <el-table-column label="操作" width="220">
         <template #default="scope">
-          <el-button
-            type="success"
-            size="small"
-            v-if="scope.row.status === 0"
-            @click="payOrder(scope.row)"
-          >
-            去支付
-          </el-button>
-          <el-tag v-else type="success" size="small">
-            {{ scope.row.status === 1 ? '已支付' : '已取消' }}
-          </el-tag>
+         <el-button
+  type="success"
+  size="small"
+  v-if="scope.row.status === 0"
+  @click="handlePayOrder(scope.row)"
+>
+  去支付
+</el-button>
+<el-tag v-else type="success" size="small">
+  {{ scope.row.status === 1 ? '已支付' : '已取消' }}
+</el-tag>
 
-          <el-button
-            type="danger"
-            size="small"
-            style="margin-left: 5px"
-            @click="deleteOrder(scope.row.id)"
-          >
-            删除
-          </el-button>
+<el-button
+  type="danger"
+  size="small"
+  style="margin-left: 5px"
+  @click="handleDeleteOrder(scope.row)"
+>
+  删除
+</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -59,7 +59,7 @@
           style="padding:10px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between"
         >
           <span>{{ item.name }}</span>
-          <span style="color:#e53935">¥{{ item.price }} × {{ item.quantity }}</span>
+          <span style="color:#e53935">¥{{ item.price.toFixed(2) }} × {{ item.quantity }}</span>
         </div>
       </div>
       <template #footer>
@@ -71,63 +71,81 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElDialog } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { getOrderList, payOrder, deleteOrder, getOrderItems } from '@/api/order'
 
+const router = useRouter()
 const orderList = ref([])
 const dialogVisible = ref(false)
 const currentOrderItems = ref([])
 
-const getOrderList = async () => {
-  try {
-    const res = await fetch("http://localhost:8080/api/order/list?user_id=1")
-    const data = await res.json()
-    orderList.value = data
+// 价格格式化
+const formatPrice = (row) => {
+  return `¥${row.total.toFixed(2)}`
+}
 
+// 获取订单列表
+const loadOrderList = async () => {
+  try {
+    const data = await getOrderList()
+    orderList.value = data
+    console.log('✅ 订单列表加载成功：', data)
+
+    // 批量获取订单商品
     const itemPromises = orderList.value.map(async (order) => {
       try {
-        const resp = await fetch(`http://localhost:8080/api/order/items/${order.id}`)
-        const items = await resp.json()
+        const items = await getOrderItems(order.id)
         const names = items.map(i => i.name)
         order.goodsText = names.length > 2 ? names.slice(0,2).join('，') + '…' : names.join('，')
         order.allItems = items
       } catch (e) {
-        console.log("获取订单商品失败", e)
+        console.error("获取订单商品失败", e)
         order.goodsText = '加载失败'
         order.allItems = []
       }
     })
     await Promise.all(itemPromises)
   } catch (e) { 
-    console.log("获取订单失败", e) 
-    ElMessage.error("获取订单列表失败")
+    console.error("获取订单失败", e) 
+    ElMessage.error(e.response?.data?.error || "获取订单列表失败")
+    if (e.response?.status === 401) {
+      router.push('/user/login')
+    }
   }
 }
 
-const payOrder = async (order) => {
+// 支付订单
+const handlePayOrder = async (order) => {
   try {
-    const res = await fetch(`http://localhost:8080/api/order/pay/${order.id}`, { method: 'POST' })
-    const data = await res.json()
-    if (res.ok) {
-      ElMessage.success("支付成功！")
-      getOrderList()
-    } else {
-      ElMessage.error(data.error || "支付失败")
-    }
-  } catch (e) { ElMessage.error("支付请求失败") }
+    await payOrder(order.id)
+    ElMessage.success("支付成功！")
+    loadOrderList()
+  } catch (e) { 
+    console.error("支付失败", e)
+    ElMessage.error(e.response?.data?.error || "支付失败") 
+  }
 }
 
-const deleteOrder = async (id) => {
+// 删除订单
+const handleDeleteOrder = async (order) => {
   try {
-    await fetch(`http://localhost:8080/api/order/delete/${id}`, { method: 'DELETE' })
+    await deleteOrder(order.id)
     ElMessage.success("删除成功")
-    getOrderList()
-  } catch (e) { ElMessage.error("删除失败") }
+    loadOrderList()
+  } catch (e) { 
+    console.error("删除订单失败", e)
+    ElMessage.error(e.response?.data?.error || "删除失败") 
+  }
 }
 
+// 显示订单商品详情
 const showOrderItems = (order) => {
   currentOrderItems.value = order.allItems
   dialogVisible.value = true
 }
 
-onMounted(() => { getOrderList() })
+onMounted(() => { 
+  loadOrderList() 
+})
 </script>

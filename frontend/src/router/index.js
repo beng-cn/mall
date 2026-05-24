@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
 
 const routes = [
   // 默认首页 → 登录页
@@ -32,12 +33,12 @@ const routes = [
     component: () => import('../views/product/ProductDetail.vue'),
     meta: { requiresAuth: true }
   },
-  // 🔥 新增：新增商品路由（完全匹配你的文件路径）
+  // 新增商品路由（管理员专属）
   {
     path: '/product/add',
     name: 'AddProduct',
     component: () => import('../views/product/AddProduct.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, isAdmin: true }
   },
 
   // 购物车（必须登录）
@@ -68,16 +69,30 @@ const router = createRouter({
   routes
 })
 
-// 登录拦截路由守卫
 router.beforeEach((to, from, next) => {
-  const userInfo = localStorage.getItem('user')
-  const isLoggedIn = !!userInfo
+  const userStr = localStorage.getItem('user')
+  const isLoggedIn = !!userStr
 
   if (to.meta.requiresAuth && !isLoggedIn) {
-    next('/user/login')
-  } else {
-    next()
+    ElMessage.warning('请先登录')
+    return next('/user/login')
   }
+
+  if (to.meta.isAdmin) {
+    try {
+      const user = JSON.parse(userStr)
+      if (user.role_id !== 1) {
+        ElMessage.error('权限不足，仅管理员可访问')
+        return next('/product/list')
+      }
+    } catch (e) {
+      ElMessage.error('登录状态异常，请重新登录')
+      localStorage.clear()
+      return next('/user/login')
+    }
+  }
+
+  next()
 })
 
 export default router

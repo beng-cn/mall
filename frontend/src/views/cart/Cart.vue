@@ -15,9 +15,7 @@
     >
       <el-table-column type="selection" width="55" />
       <el-table-column prop="name" label="商品名称" />
-      <el-table-column prop="price" label="单价" />
-
-      <!-- 数量：- 数字 + -->
+      <el-table-column prop="price" label="单价" :formatter="formatPrice" />
       <el-table-column label="数量" width="180">
         <template #default="scope">
           <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
@@ -55,21 +53,29 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { getCartList, updateCartQuantity, deleteCartItem } from '@/api/cart'
+import { createOrder } from '@/api/order'
+import { getProductDetail } from '@/api/product'
 
+const router = useRouter()
 const cartList = ref([])
 const selectedList = ref([])
 
+// 价格格式化
+const formatPrice = (row) => {
+  return `¥${row.price.toFixed(2)}`
+}
+
 // 获取购物车
-const getCartList = async () => {
+const loadCartList = async () => {
   try {
-    const res = await fetch("http://localhost:8080/api/cart/list?user_id=1")
-    const carts = await res.json()
+    const carts = await getCartList()
     
     const finalList = []
     for (let cart of carts) {
-      const pRes = await fetch(`http://localhost:8080/api/product/${cart.product_id}`)
-      const product = await pRes.json()
+      const product = await getProductDetail(cart.product_id)
       finalList.push({
         ...cart,
         name: product.name,
@@ -77,8 +83,13 @@ const getCartList = async () => {
       })
     }
     cartList.value = finalList
+    console.log('✅ 购物车加载成功：', finalList)
   } catch (e) {
-    ElMessage.error("获取购物车失败")
+    console.error('❌ 获取购物车失败：', e)
+    ElMessage.error(e.response?.data?.error || "获取购物车失败")
+    if (e.response?.status === 401) {
+      router.push('/user/login')
+    }
   }
 }
 
@@ -107,7 +118,7 @@ const handleBlur = async (row) => {
   let qty = parseInt(row.quantity)
 
   if (isNaN(qty) || qty < 1 || qty > 99) {
-    ElMessage.warning("请输入 1‑99 之间的数字")
+    ElMessage.warning("请输入 1-99 之间的数字")
     row.quantity = 1
     await updateQuantity(row)
     return
@@ -120,13 +131,11 @@ const handleBlur = async (row) => {
 // 同步后端
 const updateQuantity = async (row) => {
   try {
-    await fetch(`http://localhost:8080/api/cart/${row.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ quantity: row.quantity })
-    })
+    await updateCartQuantity(row.id, { quantity: row.quantity })
+    console.log('✅ 购物车数量更新成功')
   } catch (e) {
-    ElMessage.error("更新数量失败")
+    console.error('❌ 更新数量失败：', e)
+    ElMessage.error(e.response?.data?.error || "更新数量失败")
   }
 }
 
@@ -136,25 +145,35 @@ const handleSelectionChange = (val) => {
 
 // 删除
 const delCart = async (id) => {
-  await fetch(`http://localhost:8080/api/cart/${id}`, { method: "DELETE" })
-  ElMessage.success("删除成功")
-  getCartList()
+  try {
+    await deleteCartItem(id)
+    ElMessage.success("删除成功")
+    loadCartList()
+  } catch (e) {
+    console.error('❌ 删除购物车失败：', e)
+    ElMessage.error(e.response?.data?.error || "删除失败")
+  }
 }
 
 // 生成订单
 const goToCheckout = async () => {
-  const cartIds = selectedList.value.map(item => item.id)
-  const res = await fetch("http://localhost:8080/api/order/create", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: 1, cart_ids: cartIds })
-  })
-  const data = await res.json()
-  ElMessage.success("订单创建成功：" + data.order.order_no)
-  getCartList()
+  if (selectedList.value.length === 0) {
+    ElMessage.warning("请至少选择一件商品")
+    return
+  }
+
+  try {
+    const cartIds = selectedList.value.map(item => item.id)
+    const data = await createOrder({ cart_ids: cartIds })
+    ElMessage.success("订单创建成功：" + data.order.order_no)
+    loadCartList()
+  } catch (e) {
+    console.error('❌ 创建订单失败：', e)
+    ElMessage.error(e.response?.data?.error || "创建订单失败")
+  }
 }
 
 onMounted(() => {
-  getCartList()
+  loadCartList()
 })
 </script>

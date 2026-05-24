@@ -36,19 +36,32 @@ const form = ref({
 
 const handleLogin = async () => {
   try {
+    localStorage.clear()
+
+    console.log('📤 发送登录请求：', form.value)
     const res = await login(form.value)
-    if (res.user) {
-      // 保存登录状态
+    console.log('📥 登录响应完整数据：', res)
+    
+    if (res && res.token) {
+      console.log('✅ 登录成功，准备跳转')
+      localStorage.setItem('token', res.token)
       localStorage.setItem('user', JSON.stringify(res.user))
+      localStorage.setItem('role_id', res.user.role_id) 
+      
       ElMessage.success('登录成功')
-      router.push('/product/list')
+      await router.push('/product/list')
     } else {
-      ElMessage.error(res.error || '登录失败')
+      ElMessage.error(res?.error || '登录失败，服务器返回数据异常')
     }
   } catch (err) {
-    // 打印错误详情，方便排查
-    console.error('登录请求错误:', err)
-    ElMessage.error(err.response?.data?.error || '账号或密码错误')
+    console.error('❌ 登录请求异常：', err)
+    if (err.response) {
+      ElMessage.error(err.response.data?.error || '登录失败')
+    } else if (err.request) {
+      ElMessage.error('网络异常，请检查连接')
+    } else {
+      ElMessage.error('登录失败，请重试')
+    }
   }
 }
 </script>

@@ -89,16 +89,25 @@ const handleAddCart = async (pid) => {
     ElMessage.error("商品ID无效")
     return
   }
+  
+  const userStr = localStorage.getItem('user')
+  if (!userStr) {
+    ElMessage.error("请先登录")
+    router.push('/user/login')
+    return
+  }
+  
+  const user = JSON.parse(userStr)
 
   try {
     await addCart({
-      user_id: 1,
       product_id: pid,
       quantity: 1
     })
     ElMessage.success("加入购物车成功")
   } catch (e) {
-    ElMessage.error("商品库存不足，无法加入购物车")
+    console.error("加入购物车失败:", e)
+    ElMessage.error(e.response?.data?.error || "商品库存不足，无法加入购物车")
   }
 }
 

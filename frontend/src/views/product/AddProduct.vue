@@ -202,6 +202,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
+import request from '../../utils/request'
 
 const router = useRouter()
 
@@ -242,9 +243,10 @@ const saving = ref(false)
 // 加载父分类列表
 const loadParentCategories = async () => {
   try {
-    const res = await fetch('http://localhost:8080/api/product/category/parents')
-    if (!res.ok) throw new Error('加载父分类失败')
-    parentCategories.value = await res.json()
+    parentCategories.value = await request({
+      url: '/product/category/parents',
+      method: 'get'
+    })
   } catch (e) {
     console.error('加载父分类失败：', e)
     ElMessage.error('加载分类列表失败')
@@ -261,9 +263,11 @@ const handleParentChange = async (pid) => {
     return
   }
   try {
-    const res = await fetch(`http://localhost:8080/api/product/category/children?parent_id=${pid}`)
-    if (!res.ok) throw new Error('加载子分类失败')
-    childCategories.value = await res.json()
+    childCategories.value = await request({
+      url: '/product/category/children',
+      method: 'get',
+      params: { parent_id: pid }
+    })
   } catch (e) {
     console.error('加载子分类失败：', e)
     ElMessage.error('加载子分类失败')
@@ -277,10 +281,11 @@ const handleChildChange = async (cid) => {
   if (!cid) return
   
   try {
-    // 调用商品列表接口，筛选该子分类下的商品
-    const res = await fetch(`http://localhost:8080/api/product/list?category_id=${cid}`)
-    if (!res.ok) throw new Error('加载商品列表失败')
-    productOptions.value = await res.json()
+    productOptions.value = await request({
+      url: '/product/list',
+      method: 'get',
+      params: { category_id: cid }
+    })
   } catch (e) {
     console.error('加载商品列表失败：', e)
     ElMessage.error('加载该分类下的商品失败')
@@ -297,10 +302,10 @@ const handleProductSelect = async (productId) => {
   }
 
   try {
-    // 获取商品详情
-    const res = await fetch(`http://localhost:8080/api/product/${productId}`)
-    if (!res.ok) throw new Error('获取商品详情失败')
-    const product = await res.json()
+    const product = await request({
+      url: `/product/${productId}`,
+      method: 'get'
+    })
 
     // 自动填充所有表单字段
     productForm.value = {
@@ -332,14 +337,10 @@ const deleteProduct = async () => {
       }
     )
 
-    const res = await fetch(`http://localhost:8080/api/admin/product/${selectedProductId.value}`, {
-      method: 'DELETE'
+    await request({
+      url: `/admin/product/${selectedProductId.value}`,
+      method: 'delete'
     })
-
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error)
-    }
 
     ElMessage.success('商品删除成功')
     
@@ -378,29 +379,24 @@ const saveParentCategory = async () => {
   }
   saving.value = true
   try {
-    let res
     if (isCategoryEditMode.value) {
       // 编辑模式
-      res = await fetch(`http://localhost:8080/api/product/category/${editCategoryId.value}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: categoryForm.value.name })
+      await request({
+        url: `/admin/category/${editCategoryId.value}`,
+        method: 'put',
+        data: { name: categoryForm.value.name }
       })
     } else {
       // 新增模式
-      res = await fetch('http://localhost:8080/api/product/category/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await request({
+        url: '/admin/category/add',
+        method: 'post',
+        data: {
           name: categoryForm.value.name,
           parent_id: 0,
           status: 1
-        })
+        }
       })
-    }
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error)
     }
     ElMessage.success(isCategoryEditMode.value ? '父分类编辑成功' : '父分类添加成功')
     showParentCategoryDialog.value = false
@@ -424,13 +420,10 @@ const deleteParentCategory = async () => {
         type: 'warning'
       }
     )
-    const res = await fetch(`http://localhost:8080/api/product/category/${selectedParentId.value}`, {
-      method: 'DELETE'
+    await request({
+      url: `/admin/category/${selectedParentId.value}`,
+      method: 'delete'
     })
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error)
-    }
     ElMessage.success('父分类删除成功')
     selectedParentId.value = ''
     childCategories.value = []
@@ -467,29 +460,24 @@ const saveChildCategory = async () => {
   }
   saving.value = true
   try {
-    let res
     if (isCategoryEditMode.value) {
       // 编辑模式
-      res = await fetch(`http://localhost:8080/api/product/category/${editCategoryId.value}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: categoryForm.value.name })
+      await request({
+        url: `/admin/category/${editCategoryId.value}`,
+        method: 'put',
+        data: { name: categoryForm.value.name }
       })
     } else {
       // 新增模式
-      res = await fetch('http://localhost:8080/api/product/category/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await request({
+        url: '/admin/category/add',
+        method: 'post',
+        data: {
           name: categoryForm.value.name,
           parent_id: selectedParentId.value,
           status: 1
-        })
+        }
       })
-    }
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error)
     }
     ElMessage.success(isCategoryEditMode.value ? '子分类编辑成功' : '子分类添加成功')
     showChildCategoryDialog.value = false
@@ -513,13 +501,10 @@ const deleteChildCategory = async () => {
         type: 'warning'
       }
     )
-    const res = await fetch(`http://localhost:8080/api/product/category/${selectedChildId.value}`, {
-      method: 'DELETE'
+    await request({
+      url: `/admin/category/${selectedChildId.value}`,
+      method: 'delete'
     })
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error)
-    }
     ElMessage.success('子分类删除成功')
     selectedChildId.value = ''
     handleParentChange(selectedParentId.value)
@@ -548,7 +533,7 @@ const triggerFileSelect = () => {
   fileInput.value.click()
 }
 
-// 处理文件上传（纯Fetch实现）
+// 处理文件上传
 const handleFileUpload = async (e) => {
   const file = e.target.files[0]
   if (!file) return
@@ -573,16 +558,14 @@ const handleFileUpload = async (e) => {
   formData.append('image', file)
 
   try {
-    const res = await fetch('http://localhost:8080/api/product/upload', {
-      method: 'POST',
-      body: formData
+    const data = await request({
+      url: '/admin/upload',
+      method: 'post',
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      throw new Error(data.error || '上传失败')
-    }
 
     productForm.value.image = data.url
     ElMessage.success('图片上传成功')
@@ -629,26 +612,20 @@ const submitProduct = async () => {
       category_id: categoryId
     }
 
-    let res
     if (isEditMode.value) {
       // 编辑模式：调用更新接口
-      res = await fetch(`http://localhost:8080/api/admin/product/${selectedProductId.value}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData)
+      await request({
+        url: `/admin/product/${selectedProductId.value}`,
+        method: 'put',
+        data: requestData
       })
     } else {
       // 新增模式：调用新增接口
-      res = await fetch('http://localhost:8080/api/admin/product', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData)
+      await request({
+        url: '/admin/product',
+        method: 'post',
+        data: requestData
       })
-    }
-    
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error || '提交失败')
     }
     
     ElMessage.success(isEditMode.value ? '商品更新成功' : '商品新增成功')
