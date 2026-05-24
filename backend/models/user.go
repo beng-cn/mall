@@ -19,4 +19,5 @@ type User struct {
 	Email    string `json:"email"`
 	Phone    string `json:"phone"`
 	Status   int    `gorm:"default:1" json:"status"`
+	RoleID   uint   `gorm:"default:2;comment:'角色ID:1=管理员,2=普通用户'" json:"role_id"`
 }

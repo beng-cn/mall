@@ -76,7 +76,6 @@ func GetProductDetail(c *gin.Context) {
 
 // 获取所有父分类
 func GetParentCategories(c *gin.Context) {
-	// 固定缓存key，因为一级分类永远是 parent_id=0
 	cacheKey := "category:parent"
 
 	// 1. 先查Redis
@@ -102,7 +101,6 @@ func GetParentCategories(c *gin.Context) {
 // 获取子分类
 func GetChildCategories(c *gin.Context) {
 	parentID := c.Query("parent_id")
-	// 用parent_id做缓存key，不同父分类缓存分开
 	cacheKey := fmt.Sprintf("category:child:%s", parentID)
 
 	// 1. 查缓存
@@ -114,7 +112,6 @@ func GetChildCategories(c *gin.Context) {
 		return
 	}
 
-	// 2. 你原来的查询逻辑不动
 	var list []models.Category
 	config.DB.Where("parent_id = ? AND status = 1", parentID).Find(&list)
 
