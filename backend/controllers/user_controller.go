@@ -5,6 +5,7 @@ import (
 	"backend/models"
 	"backend/utils"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -126,4 +127,97 @@ func UpdateUserInfo(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "更新成功"})
+}
+
+// 管理员获取用户列表
+func ListUsers(c *gin.Context) {
+	// 获取分页和搜索参数
+	pageNum, _ := strconv.Atoi(c.Query("page_num"))
+	pageSize, _ := strconv.Atoi(c.Query("page_size"))
+	keyword := c.Query("keyword")
+
+	// 分页默认值
+	if pageNum <= 0 {
+		pageNum = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	// 构建查询条件
+	var users []models.User
+	var total int64
+	tx := config.DB.Model(&models.User{})
+
+	// 搜索关键词
+	if keyword != "" {
+		tx = tx.Where("username LIKE ?", "%"+keyword+"%")
+	}
+
+	// 统计总数
+	tx.Count(&total)
+
+	// 分页查询
+	offset := (pageNum - 1) * pageSize
+	if err := tx.Order("id DESC").Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "获取用户列表失败",
+		})
+		return
+	}
+
+	// 隐藏密码
+	for i := range users {
+		users[i].Password = ""
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"list":  users,
+		"total": total,
+	})
+}
+
+// 管理员更新用户状态
+func UpdateUserStatus(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var req struct {
+		Status int `json:"status" binding:"required,oneof=0 1"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误：" + err.Error()})
+		return
+	}
+
+	// 更新状态
+	if err := config.DB.Model(&models.User{}).Where("id = ?", id).Update("status", req.Status).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新用户状态失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "状态更新成功"})
+}
+
+// 管理员删除用户
+func DeleteUser(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	// 禁止删除管理员
+	var user models.User
+	if err := config.DB.Where("id = ?", id).First(&user).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "用户不存在"})
+		return
+	}
+	if user.RoleID == 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "禁止删除管理员用户"})
+		return
+	}
+
+	// 软删除
+	if err := config.DB.Delete(&models.User{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除用户失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "删除用户成功"})
 }

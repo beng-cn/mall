@@ -70,9 +70,9 @@ func SetupRouter() *gin.Engine {
 		admin.POST("/upload", controllers.UploadImage)
 
 		// 用户管理（预留，后续添加）
-		//admin.GET("/user/list", controllers.ListUsers)
-		//admin.PUT("/user/:id/status", controllers.UpdateUserStatus)
-		//admin.DELETE("/user/:id", controllers.DeleteUser)
+		admin.GET("/user/list", controllers.ListUsers)
+		admin.PUT("/user/:id/status", controllers.UpdateUserStatus)
+		admin.DELETE("/user/:id", controllers.DeleteUser)
 	}
 
 	return r
