@@ -61,6 +61,14 @@ const routes = [
     name: 'OrderList',
     component: () => import('../views/order/OrderList.vue'),
     meta: { requiresAuth: true }
+  },
+
+  // ==================== 新增：用户管理路由（管理员专属） ====================
+  {
+    path: '/admin/user',
+    name: 'UserManagement',
+    component: () => import('../views/admin/user_management.vue'),
+    meta: { requiresAuth: true, isAdmin: true }
   }
 ]
 
