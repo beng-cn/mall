@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 抽离核心登录校验逻辑
+// 抽离核心登录校验逻辑，供两个权限中间件复用
 func validateAuth(c *gin.Context) bool {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
@@ -31,6 +31,7 @@ func validateAuth(c *gin.Context) bool {
 		return false
 	}
 
+	// 将用户信息存入上下文，供后续控制器使用
 	c.Set("user_id", claims.UserID)
 	c.Set("role_id", claims.RoleID)
 	c.Set("username", claims.Username)
@@ -40,7 +41,9 @@ func validateAuth(c *gin.Context) bool {
 // 普通用户登录校验中间件
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		validateAuth(c)
+		if validateAuth(c) {
+			c.Next()
+		}
 	}
 }
 

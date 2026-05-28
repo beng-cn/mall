@@ -3,11 +3,10 @@ package controllers
 import (
 	"backend/config"
 	"backend/models"
-	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // 获取购物车列表
@@ -48,9 +47,15 @@ func AddToCart(c *gin.Context) {
 		return
 	}
 
+	// ✅ 先校验商品是否存在且库存充足
 	var product models.Product
 	if err := config.DB.First(&product, req.ProductID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "商品不存在"})
+		return
+	}
+
+	if product.Status != 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "商品已下架"})
 		return
 	}
 
@@ -59,30 +64,50 @@ func AddToCart(c *gin.Context) {
 		return
 	}
 
-	// 查找是否已存在
-	var existingCart models.Cart
+	if req.Quantity <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "添加数量必须大于0"})
+		return
+	}
+
+	if req.Quantity > product.Stock {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("商品库存不足，剩余%d件", product.Stock)})
+		return
+	}
+
+	var existingCarts []models.Cart
 	err := config.DB.Where(
-		"user_id = ? AND product_id = ? AND deleted_at IS NULL",
+		"user_id = ? AND product_id = ?",
 		userID.(uint), req.ProductID,
-	).First(&existingCart).Error
+	).Limit(1).Find(&existingCarts).Error
 
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			newCart := models.Cart{
-				UserID:    userID.(uint),
-				ProductID: req.ProductID,
-				Quantity:  req.Quantity,
-			}
-			if err := config.DB.Create(&newCart).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "添加购物车失败"})
-				return
-			}
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询购物车失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询购物车失败"})
+		return
+	}
+
+	if len(existingCarts) == 0 {
+		// 购物车中没有该商品，创建新记录
+		newCart := models.Cart{
+			UserID:    userID.(uint),
+			ProductID: req.ProductID,
+			Quantity:  req.Quantity,
+		}
+		if err := config.DB.Create(&newCart).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "添加购物车失败"})
 			return
 		}
 	} else {
-		existingCart.Quantity += req.Quantity
+		// 购物车中已有该商品，更新数量
+		existingCart := existingCarts[0]
+		newQuantity := existingCart.Quantity + req.Quantity
+
+		// ✅ 校验更新后的数量是否超过库存
+		if newQuantity > product.Stock {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("购物车中该商品已达库存上限，剩余%d件", product.Stock)})
+			return
+		}
+
+		existingCart.Quantity = newQuantity
 		if err := config.DB.Save(&existingCart).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新购物车失败"})
 			return

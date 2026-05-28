@@ -10,6 +10,8 @@ func main() {
 	// 初始化数据库
 	config.InitDB()
 	config.InitRedis()
+	// 初始化支付宝
+	config.InitAliPay()
 
 	// 自动迁移表结构
 	config.DB.AutoMigrate(

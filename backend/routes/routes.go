@@ -9,7 +9,6 @@ import (
 
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
-
 	// 全局跨域中间件
 	r.Use(middlewares.Cors())
 
@@ -28,12 +27,20 @@ func SetupRouter() *gin.Engine {
 		product.GET("/category/children", controllers.GetChildCategories)
 	}
 
+	// ✅ 支付宝相关公开接口
+	alipay := r.Group("/api/alipay")
+	{
+		// 异步回调（生产环境用，本地支付宝无法访问）
+		alipay.POST("/notify", controllers.AliPayNotify)
+		// 同步跳转（本地开发核心，支付成功后自动跳转这里）
+		alipay.GET("/success", controllers.AliPayReturn)
+	}
+
 	// ==================== 需要普通用户登录的接口 ====================
 	auth := r.Group("/api/auth")
 	auth.Use(middlewares.AuthMiddleware())
 	{
 		auth.PUT("/user/info", controllers.UpdateUserInfo)
-
 		cart := auth.Group("/cart")
 		{
 			cart.GET("/list", controllers.GetCartList)
@@ -41,11 +48,13 @@ func SetupRouter() *gin.Engine {
 			cart.PUT("/:id", controllers.UpdateCartQuantity)
 			cart.DELETE("/:id", controllers.DeleteCartItem)
 		}
-
 		order := auth.Group("/order")
 		{
 			order.POST("/create", controllers.CreateOrder)
 			order.GET("/list", controllers.GetOrderList)
+			// 支付宝统一下单（获取支付链接）
+			order.POST("/alipay", controllers.AliPayUnifiedOrder)
+			// 保留原模拟支付接口，方便不登录支付宝时测试
 			order.POST("/pay/:id", controllers.PayOrder)
 			order.GET("/items/:id", controllers.GetOrderItems)
 			order.DELETE("/delete/:id", controllers.DeleteOrder)
@@ -60,16 +69,13 @@ func SetupRouter() *gin.Engine {
 		admin.POST("/product", controllers.CreateProduct)
 		admin.PUT("/product/:id", controllers.UpdateProduct)
 		admin.DELETE("/product/:id", controllers.DeleteProduct)
-
 		// 分类管理
 		admin.POST("/category/add", controllers.CreateCategory)
 		admin.PUT("/category/:id", controllers.UpdateCategory)
 		admin.DELETE("/category/:id", controllers.DeleteCategory)
-
 		// 图片上传
 		admin.POST("/upload", controllers.UploadImage)
-
-		// 用户管理（预留，后续添加）
+		// 用户管理
 		admin.GET("/user/list", controllers.ListUsers)
 		admin.PUT("/user/:id/status", controllers.UpdateUserStatus)
 		admin.DELETE("/user/:id", controllers.DeleteUser)

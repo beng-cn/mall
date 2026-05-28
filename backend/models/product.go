@@ -19,5 +19,6 @@ type Product struct {
 	Image      string  `json:"image"`
 	Status     int     `gorm:"default:1" json:"status"`
 
+	Version  int      `gorm:"default:0" json:"-"`
 	Category Category `gorm:"foreignKey:CategoryID" json:"category"`
 }

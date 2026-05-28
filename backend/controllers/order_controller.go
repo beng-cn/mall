@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 订单创建接口
 func CreateOrder(c *gin.Context) {
 	var req struct {
 		CartIDs []uint `json:"cart_ids"`
@@ -25,23 +26,47 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 
+	// 开启数据库事务，保证订单创建全流程原子性
+	tx := config.DB.Begin()
+	if tx.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "系统繁忙，请稍后再试"})
+		return
+	}
+	// 兜底：发生panic时自动回滚事务，防止数据不一致
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 1. 事务内查询用户选择的购物车商品
 	var carts []models.Cart
-	if err := config.DB.Where("id IN ? AND user_id = ?", req.CartIDs, userID.(uint)).Find(&carts).Error; err != nil {
+	if err := tx.Where("id IN ? AND user_id = ?", req.CartIDs, userID.(uint)).Find(&carts).Error; err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取购物车失败"})
 		return
 	}
-
 	if len(carts) == 0 {
+		tx.Rollback()
 		c.JSON(http.StatusBadRequest, gin.H{"error": "未选择有效商品"})
 		return
 	}
 
+	// 2. 计算订单总金额并生成订单项（下单前预校验库存）
 	var total float64
 	var items []models.OrderItem
 	for _, cart := range carts {
 		var product models.Product
-		if err := config.DB.First(&product, cart.ProductID).Error; err != nil {
-			continue
+		if err := tx.First(&product, cart.ProductID).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("商品ID %d 不存在或已下架", cart.ProductID)})
+			return
+		}
+		// 预校验库存，防止用户下单时库存已不足
+		if product.Stock < cart.Quantity {
+			tx.Rollback()
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("商品《%s》库存不足，剩余%d件", product.Name, product.Stock)})
+			return
 		}
 		total += product.Price * float64(cart.Quantity)
 		items = append(items, models.OrderItem{
@@ -51,24 +76,45 @@ func CreateOrder(c *gin.Context) {
 		})
 	}
 
-	orderNo := "ORD" + time.Now().Format("20060102150405") + time.Now().Format("999999")
+	// ✅ 修复订单号生成逻辑：使用纳秒时间戳避免高并发下重复
+	orderNo := fmt.Sprintf("ORD%s%d", time.Now().Format("20060102150405"), time.Now().UnixNano()%1000000)
 	order := models.Order{
 		UserID:  userID.(uint),
 		OrderNo: orderNo,
 		Total:   total,
-		Status:  0,
+		Status:  0, // 0=待支付 1=已支付 2=已取消
 	}
-	if err := config.DB.Create(&order).Error; err != nil {
+
+	// 3. 事务内创建订单
+	if err := tx.Create(&order).Error; err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建订单失败"})
 		return
 	}
 
+	// 4. 批量创建订单项（性能优化：替代循环单个创建）
 	for i := range items {
 		items[i].OrderID = order.ID
-		config.DB.Create(&items[i])
+	}
+	if err := tx.Create(&items).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建订单项失败"})
+		return
 	}
 
-	config.DB.Delete(&carts)
+	// 5. 事务内删除已下单的购物车商品
+	if err := tx.Delete(&carts).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "清空购物车失败"})
+		return
+	}
+
+	// 6. 所有操作成功，提交事务
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "订单提交失败，请稍后再试"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "订单创建成功", "order": order})
 }
 
@@ -89,10 +135,10 @@ func GetOrderList(c *gin.Context) {
 	c.JSON(http.StatusOK, orders)
 }
 
+// 原模拟支付接口（保留用于测试）
 func PayOrder(c *gin.Context) {
 	id := c.Param("id")
 	var order models.Order
-
 	if err := config.DB.First(&order, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "订单不存在"})
 		return
@@ -109,43 +155,16 @@ func PayOrder(c *gin.Context) {
 		return
 	}
 
-	tx := config.DB.Begin()
-	if tx.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "系统繁忙"})
+	if order.Status == 2 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "订单已取消"})
 		return
 	}
 
-	var orderItems []models.OrderItem
-	if err := tx.Where("order_id = ? AND deleted_at IS NULL", id).Find(&orderItems).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取订单商品失败"})
+	// 调用公共支付处理逻辑
+	if err := processOrderPayment(order.ID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	// 扣减库存
-	for _, item := range orderItems {
-		var product models.Product
-		if err := tx.First(&product, item.ProductID).Error; err != nil {
-			tx.Rollback()
-			c.JSON(http.StatusBadRequest, gin.H{"error": "商品不存在"})
-			return
-		}
-
-		if product.Stock < item.Quantity {
-			tx.Rollback()
-			c.JSON(http.StatusBadRequest, gin.H{"error": "商品库存不足"})
-			return
-		}
-
-		tx.Model(&product).UpdateColumn("stock", product.Stock-item.Quantity)
-
-		ClearSingleProductCache(fmt.Sprintf("%d", item.ProductID))
-	}
-
-	tx.Model(&order).UpdateColumn("status", 1)
-	tx.Commit()
-
-	ClearAllProductListCache()
 
 	c.JSON(http.StatusOK, gin.H{"message": "支付成功"})
 }
