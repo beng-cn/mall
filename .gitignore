@@ -9,6 +9,7 @@ backend/bin/
 backend/*.exe
 backend/*.log
 backend/*.out
+backend/config/
 .vscode/
 .idea/
 *.swp
