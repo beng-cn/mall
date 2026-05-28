@@ -30,6 +30,7 @@
   type="success"
   size="small"
   v-if="scope.row.status === 0"
+  :loading="payingOrderId === scope.row.id"
   @click="handlePayOrder(scope.row)"
 >
   去支付
@@ -70,15 +71,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getOrderList, payOrder, deleteOrder, getOrderItems } from '@/api/order'
+// ✅ 导入新增的alipayOrder接口
+import { getOrderList, payOrder, deleteOrder, getOrderItems, alipayOrder } from '@/api/order'
 
 const router = useRouter()
 const orderList = ref([])
 const dialogVisible = ref(false)
 const currentOrderItems = ref([])
+// ✅ 新增：控制支付按钮加载状态
+const payingOrderId = ref(null)
 
 // 价格格式化
 const formatPrice = (row) => {
@@ -115,15 +119,36 @@ const loadOrderList = async () => {
   }
 }
 
-// 支付订单
+// ✅ 修改后的支付宝支付逻辑
 const handlePayOrder = async (order) => {
+  // 防止重复点击
+  if (payingOrderId.value) return
+  
+  payingOrderId.value = order.id
   try {
-    await payOrder(order.id)
-    ElMessage.success("支付成功！")
-    loadOrderList()
+    // 调用支付宝统一下单接口，获取支付链接
+    const res = await alipayOrder(order.id)
+    console.log('✅ 支付宝支付链接生成成功：', res.pay_url)
+    
+    // 新窗口打开支付宝支付页面
+    const payWindow = window.open(res.pay_url, '_blank')
+    
+    // 监听支付窗口关闭事件，自动刷新订单状态
+    const checkWindowClosed = setInterval(() => {
+      if (payWindow.closed) {
+        clearInterval(checkWindowClosed)
+        ElMessage.info('正在刷新订单状态...')
+        loadOrderList()
+      }
+    }, 1000)
+    
+    ElMessage.success('正在跳转到支付宝支付...')
   } catch (e) { 
-    console.error("支付失败", e)
-    ElMessage.error(e.response?.data?.error || "支付失败") 
+    console.error("支付宝支付失败", e)
+    ElMessage.error(e.response?.data?.error || "生成支付链接失败") 
+  } finally {
+    // 无论成功失败，都重置加载状态
+    payingOrderId.value = null
   }
 }
 
@@ -145,7 +170,22 @@ const showOrderItems = (order) => {
   dialogVisible.value = true
 }
 
+// ✅ 新增：监听页面可见性变化，用户从支付页面返回时自动刷新
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    console.log('页面可见，刷新订单状态')
+    loadOrderList()
+  }
+}
+
 onMounted(() => { 
   loadOrderList() 
+  // 添加页面可见性监听
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onUnmounted(() => {
+  // 移除监听，防止内存泄漏
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>

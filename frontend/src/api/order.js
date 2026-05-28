@@ -25,6 +25,16 @@ export function payOrder(id) {
   })
 }
 
+export const alipayOrder = (orderId) => {
+  return request({
+    url: '/auth/order/alipay',
+    method: 'post',
+    data: {
+      order_id: orderId
+    }
+  })
+}
+
 // 获取订单商品
 export function getOrderItems(id) {
   return request({
